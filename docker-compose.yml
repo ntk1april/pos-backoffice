@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: pos-oracle-db
+    ports:
+      - "1521:1521"
+      - "5500:5500"
+    environment:
+      - ORACLE_PASSWORD=OraclePassword123
+      - APP_USER=pos_user
+      - APP_USER_PASSWORD=pos_password
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./database/init:/container-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - pos-network
+
+networks:
+  pos-network:
+    driver: bridge
+
+volumes:
+  oracle-data:
+    driver: local

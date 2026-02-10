@@ -1,0 +1,26 @@
+# Backend
+backend/.env
+backend/tmp/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

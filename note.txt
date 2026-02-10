@@ -1,0 +1,57 @@
+// when u can't run go command in terminal
+$env:Path += ";C:\Program Files\Go\bin" 
+
+// connect to db
+docker exec -it pos-oracle-db sqlplus pos_user/pos_password@XEPDB1
+
+// set format
+SET LINESIZE 200
+SET PAGESIZE 50
+
+COLUMN id            FORMAT 999
+COLUMN username      FORMAT A10
+COLUMN password_hash FORMAT A15
+COLUMN full_name     FORMAT A25
+COLUMN role          FORMAT A10
+COLUMN status        FORMAT A10
+COLUMN created_at    FORMAT A20
+COLUMN updated_at    FORMAT A20
+COLUMN sku           FORMAT A10
+COLUMN name          FORMAT A20
+COLUMN description   FORMAT A25
+COLUMN status        FORMAT A10
+COLUMN created_by    FORMAT 999
+COLUMN updated_by    FORMAT 999
+COLUMN price         FORMAT 999
+COLUMN cost          FORMAT 999
+COLUMN stock         FORMAT 999
+
+// select data
+SELECT
+  id,
+  username,
+  password_hash,
+  full_name,
+  role,
+  status,
+  TO_CHAR(created_at, 'DD-MON-YY HH24:MI:SS') AS created_at,
+  TO_CHAR(updated_at, 'DD-MON-YY HH24:MI:SS') AS updated_at
+FROM users;
+
+SELECT
+  id,
+  sku,
+  name,
+  description,
+  price,
+  cost,
+  stock,
+  status,
+  TO_CHAR(created_at, 'DD-MON-YY HH24:MI:SS') AS created_at,
+  TO_CHAR(updated_at, 'DD-MON-YY HH24:MI:SS') AS updated_at,
+  created_by,
+  updated_by
+FROM products;
+
+// update password
+UPDATE users SET password_hash = 'test' WHERE username = 'test';
