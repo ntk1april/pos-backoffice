@@ -9,13 +9,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"pos-backoffice/internal/config"
 	"pos-backoffice/internal/database"
 	"pos-backoffice/internal/handler"
 	"pos-backoffice/internal/middleware"
 	"pos-backoffice/internal/repository"
 	"pos-backoffice/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -34,20 +35,21 @@ func main() {
 	db := database.GetDB()
 	userRepo := repository.NewUserRepository(db)
 	productRepo := repository.NewProductRepository(db)
-	stockRepo := repository.NewStockRepository(db)
+	storeRepo := repository.NewStoreRepository(db)
+	transactionRepo := repository.NewTransactionRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo)
 	productService := service.NewProductService(productRepo)
-	stockService := service.NewStockService(db, productRepo, stockRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService)
 	productHandler := handler.NewProductHandler(productService)
-	stockHandler := handler.NewStockHandler(stockService)
+	storeHandler := handler.NewStoreHandler(storeRepo)
+	transactionHandler := handler.NewTransactionHandler(transactionRepo, productRepo)
 
 	// Setup Gin router
-	router := setupRouter(authHandler, productHandler, stockHandler)
+	router := setupRouter(authHandler, productHandler, storeHandler, transactionHandler)
 
 	// Create HTTP server
 	srv := &http.Server{
@@ -83,7 +85,7 @@ func main() {
 	log.Println("Server exited")
 }
 
-func setupRouter(authHandler *handler.AuthHandler, productHandler *handler.ProductHandler, stockHandler *handler.StockHandler) *gin.Engine {
+func setupRouter(authHandler *handler.AuthHandler, productHandler *handler.ProductHandler, storeHandler *handler.StoreHandler, transactionHandler *handler.TransactionHandler) *gin.Engine {
 	// Set Gin mode
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
@@ -131,12 +133,29 @@ func setupRouter(authHandler *handler.AuthHandler, productHandler *handler.Produ
 				}
 			}
 
-			// Stock routes
-			stock := protected.Group("/stock")
+			// Store routes
+			stores := protected.Group("/stores")
 			{
-				stock.POST("/increase", stockHandler.IncreaseStock)
-				stock.POST("/decrease", stockHandler.DecreaseStock)
-				stock.GET("/logs/:product_id", stockHandler.GetStockLogs)
+				stores.GET("", storeHandler.GetStores)
+				stores.GET("/:id", storeHandler.GetStore)
+
+				// Admin only routes
+				adminStores := stores.Group("")
+				adminStores.Use(middleware.RequireRole("ADMIN"))
+				{
+					adminStores.POST("", storeHandler.CreateStore)
+					adminStores.PUT("/:id", storeHandler.UpdateStore)
+					adminStores.DELETE("/:id", storeHandler.DeleteStore)
+				}
+			}
+
+			// Transaction routes (stock movements)
+			transactions := protected.Group("/transactions")
+			{
+				transactions.GET("", transactionHandler.GetTransactions)
+				transactions.GET("/product/:product_id", transactionHandler.GetTransactionsByProduct)
+				transactions.GET("/store/:store_id", transactionHandler.GetTransactionsByStore)
+				transactions.POST("", transactionHandler.CreateTransaction)
 			}
 		}
 	}

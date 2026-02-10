@@ -4,6 +4,8 @@ import ProductTable from '../components/ProductTable';
 import ProductModal from '../components/ProductModal';
 import { useAuth } from '../context/AuthContext';
 import { productApi } from '../api/products';
+import { transactionApi } from '../api/transactions';
+import { storeApi, Store } from '../api/stores';
 import { Product, CreateProductRequest, UpdateProductRequest } from '../types';
 
 const Products: React.FC = () => {
@@ -32,11 +34,24 @@ const Products: React.FC = () => {
     const [stockProduct, setStockProduct] = useState<Product | null>(null);
     const [stockType, setStockType] = useState<'increase' | 'decrease'>('increase');
     const [stockQuantity, setStockQuantity] = useState(0);
+    const [stockUnitPrice, setStockUnitPrice] = useState(0);
+    const [stockStoreId, setStockStoreId] = useState<number | null>(null);
     const [stockNotes, setStockNotes] = useState('');
+    const [stores, setStores] = useState<Store[]>([]);
 
     useEffect(() => {
         loadProducts();
+        loadStores();
     }, [page, search]);
+
+    const loadStores = async () => {
+        try {
+            const data = await storeApi.getStores();
+            setStores(data);
+        } catch (err) {
+            console.error('Failed to load stores:', err);
+        }
+    };
 
     const loadProducts = async () => {
         setLoading(true);
@@ -95,26 +110,31 @@ const Products: React.FC = () => {
         setStockProduct(product);
         setStockType(type);
         setStockQuantity(0);
+        setStockUnitPrice(type === 'increase' ? product.cost || 0 : product.price || 0);
+        setStockStoreId(null);
         setStockNotes('');
         setStockModalOpen(true);
     };
 
     const handleStockSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!stockProduct || stockQuantity <= 0) return;
+        if (!stockProduct || stockQuantity <= 0 || stockUnitPrice <= 0) return;
+
+        // Validate: DECREASE requires store selection
+        if (stockType === 'decrease' && !stockStoreId) {
+            alert('Please select a store for sales transactions');
+            return;
+        }
 
         try {
-            const request = {
+            await transactionApi.createTransaction({
+                transaction_type: stockType === 'increase' ? 'INCREASE' : 'DECREASE',
                 product_id: stockProduct.id,
+                store_id: stockType === 'decrease' ? stockStoreId : null,
                 quantity: stockQuantity,
+                unit_price: stockUnitPrice,
                 notes: stockNotes,
-            };
-
-            if (stockType === 'increase') {
-                await productApi.increaseStock(request);
-            } else {
-                await productApi.decreaseStock(request);
-            }
+            });
 
             setStockModalOpen(false);
             loadProducts();
@@ -235,14 +255,36 @@ const Products: React.FC = () => {
                         <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
                             <div className="px-6 py-4 border-b border-gray-200">
                                 <h2 className="text-2xl font-bold text-gray-900">
-                                    {stockType === 'increase' ? 'Increase' : 'Decrease'} Stock
+                                    {stockType === 'increase' ? 'Buy from Supplier' : 'Sell to Store'}
                                 </h2>
                                 <p className="text-sm text-gray-600 mt-1">
-                                    {stockProduct?.name} (Current: {stockProduct?.stock})
+                                    {stockProduct?.name} (Current Stock: {stockProduct?.stock})
                                 </p>
                             </div>
 
                             <form onSubmit={handleStockSubmit} className="px-6 py-4">
+                                {/* Store Selection (only for DECREASE) */}
+                                {stockType === 'decrease' && (
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Select Store <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            value={stockStoreId || ''}
+                                            onChange={(e) => setStockStoreId(parseInt(e.target.value))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                            required
+                                        >
+                                            <option value="">-- Select a store --</option>
+                                            {stores.map(store => (
+                                                <option key={store.id} value={store.id}>
+                                                    {store.name} ({store.code})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Quantity <span className="text-red-500">*</span>
@@ -255,6 +297,34 @@ const Products: React.FC = () => {
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                                         required
                                     />
+                                </div>
+
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Unit Price (฿) <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0.01"
+                                        step="0.01"
+                                        value={stockUnitPrice}
+                                        onChange={(e) => setStockUnitPrice(parseFloat(e.target.value))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        required
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {stockType === 'increase' ? 'Cost price from supplier' : 'Selling price to store'}
+                                    </p>
+                                </div>
+
+                                {/* Total Amount Display */}
+                                <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium text-gray-700">Total Amount:</span>
+                                        <span className="text-lg font-bold text-gray-900">
+                                            ฿{(stockQuantity * stockUnitPrice).toLocaleString()}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div className="mb-4">
@@ -281,8 +351,8 @@ const Products: React.FC = () => {
                                     <button
                                         type="submit"
                                         className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${stockType === 'increase'
-                                                ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-                                                : 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500'
+                                            ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+                                            : 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500'
                                             }`}
                                     >
                                         {stockType === 'increase' ? 'Increase' : 'Decrease'} Stock

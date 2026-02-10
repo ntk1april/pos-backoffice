@@ -4,8 +4,6 @@ import {
   ProductListResponse,
   CreateProductRequest,
   UpdateProductRequest,
-  StockAdjustmentRequest,
-  StockLogResponse,
   ApiResponse,
 } from "../types";
 
@@ -53,27 +51,5 @@ export const productApi = {
 
   deleteProduct: async (id: number): Promise<void> => {
     await apiClient.delete(`/products/${id}`);
-  },
-
-  increaseStock: async (request: StockAdjustmentRequest): Promise<void> => {
-    await apiClient.post("/stock/increase", request);
-  },
-
-  decreaseStock: async (request: StockAdjustmentRequest): Promise<void> => {
-    await apiClient.post("/stock/decrease", request);
-  },
-
-  getStockLogs: async (
-    productId: number,
-    page: number = 1,
-    pageSize: number = 20,
-  ): Promise<StockLogResponse> => {
-    const response = await apiClient.get<ApiResponse<StockLogResponse>>(
-      `/stock/logs/${productId}`,
-      {
-        params: { page, page_size: pageSize },
-      },
-    );
-    return response.data.data!;
   },
 };
