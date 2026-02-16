@@ -9,7 +9,7 @@ const Dashboard: React.FC = () => {
     return (
         <Layout>
             <div className="px-4 py-6 sm:px-0">
-                <h1 className="text-3xl font-bold text-gray-900 mb-6">Dashboard</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-6">Main Menu</h1>
 
                 <div className="bg-white shadow rounded-lg p-6 mb-6">
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">

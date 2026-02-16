@@ -8,6 +8,8 @@ const Stores = () => {
     const [stores, setStores] = useState<Store[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [search, setSearch] = useState('');
+    const [searchInput, setSearchInput] = useState('');
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingStore, setEditingStore] = useState<Store | null>(null);
     const [formData, setFormData] = useState({
@@ -18,18 +20,31 @@ const Stores = () => {
         status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
     });
 
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchInput !== search) {
+                setSearch(searchInput);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
     useEffect(() => {
         loadStores();
-    }, []);
+    }, [search]);
 
     const loadStores = async () => {
         setLoading(true);
         setError('');
         try {
-            const data = await storeApi.getStores();
-            setStores(data);
+            const data = await storeApi.getStores(search);
+            // Ensure data is array
+            setStores(Array.isArray(data) ? data : []);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load stores');
+            setStores([]);
         } finally {
             setLoading(false);
         }
@@ -90,16 +105,45 @@ const Stores = () => {
     return (
         <Layout>
             <div className="px-4 py-6 sm:px-0">
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                     <h1 className="text-3xl font-bold text-gray-900">Store Management</h1>
-                    {user?.role === 'ADMIN' && (
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors"
-                        >
-                            Add Store
-                        </button>
-                    )}
+
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                        {/* Search Input */}
+                        <div className="relative flex-1 sm:flex-initial">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search stores..."
+                                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500 block w-full sm:w-64"
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                            />
+                            {searchInput && (
+                                <button
+                                    onClick={() => { setSearchInput(''); setSearch(''); }}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                >
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+
+                        {user?.role === 'ADMIN' && (
+                            <button
+                                onClick={() => setShowAddModal(true)}
+                                className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
+                            >
+                                Add Store
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Error Message */}
@@ -115,11 +159,19 @@ const Stores = () => {
                         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
                         <p className="mt-4 text-gray-600">Loading stores...</p>
                     </div>
+                ) : stores.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-lg shadow">
+                        <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        <p className="text-lg font-medium text-gray-900">No stores found</p>
+                        <p className="text-sm text-gray-500 mt-1">Try adjusting your search or add a new store.</p>
+                    </div>
                 ) : (
                     /* Store List */
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {stores.map((store) => (
-                            <div key={store.id} className="bg-white shadow rounded-lg p-6">
+                            <div key={store.id} className="bg-white shadow rounded-lg p-6 hover:shadow-lg transition-shadow">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
                                         <h3 className="text-lg font-semibold text-gray-900">{store.name}</h3>

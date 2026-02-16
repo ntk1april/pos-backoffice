@@ -32,9 +32,11 @@ func (r *ProductRepository) FindAll(page, pageSize int, search string, status st
 	}
 
 	if search != "" {
-		whereClause += fmt.Sprintf(" AND UPPER(name) LIKE :%d", argIndex)
-		args = append(args, "%"+strings.ToUpper(search)+"%")
-		argIndex++
+		// Search by Name OR SKU
+		whereClause += fmt.Sprintf(" AND (UPPER(name) LIKE :%d OR UPPER(sku) LIKE :%d)", argIndex, argIndex+1)
+		term := "%" + strings.ToUpper(search) + "%"
+		args = append(args, term, term)
+		argIndex += 2
 	}
 
 	// Count total records
@@ -61,7 +63,8 @@ func (r *ProductRepository) FindAll(page, pageSize int, search string, status st
 	}
 	defer rows.Close()
 
-	var products []models.Product
+	// Initialize empty slice to ensure JSON returns [] instead of null
+	products := []models.Product{}
 	for rows.Next() {
 		var p models.Product
 		err := rows.Scan(

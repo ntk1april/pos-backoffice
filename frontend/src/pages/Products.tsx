@@ -68,8 +68,21 @@ const Products: React.FC = () => {
         }
     };
 
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchInput !== search) {
+                setSearch(searchInput);
+                setPage(1);
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchInput]);
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
+        // Immediate search on submit
         setSearch(searchInput);
         setPage(1);
     };

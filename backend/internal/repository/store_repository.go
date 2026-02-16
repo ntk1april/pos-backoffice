@@ -3,6 +3,8 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+
 	"pos-backoffice/internal/models"
 )
 
@@ -14,23 +16,34 @@ func NewStoreRepository(db *sql.DB) *StoreRepository {
 	return &StoreRepository{db: db}
 }
 
-// GetAll returns all stores
-func (r *StoreRepository) GetAll() ([]models.Store, error) {
-	query := `
+// GetAll returns all stores with optional search
+// GetAll returns all stores with optional search
+func (r *StoreRepository) GetAll(search string) ([]models.Store, error) {
+	queryBuf := `
 		SELECT id, code, name, address, phone, status, 
 		       created_at, updated_at, created_by, updated_by
 		FROM stores
 		WHERE status = 'ACTIVE'
-		ORDER BY name
 	`
+	args := []interface{}{}
 
-	rows, err := r.db.Query(query)
+	if search != "" {
+		// Search by Name or Code (case insensitive)
+		queryBuf += " AND (UPPER(name) LIKE :1 OR UPPER(code) LIKE :2)"
+		term := "%" + strings.ToUpper(search) + "%"
+		args = append(args, term, term)
+	}
+
+	queryBuf += " ORDER BY name"
+
+	rows, err := r.db.Query(queryBuf, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var stores []models.Store
+	// Initialize empty slice to ensure JSON returns [] instead of null
+	stores := []models.Store{}
 	for rows.Next() {
 		var store models.Store
 		err := rows.Scan(

@@ -11,7 +11,7 @@ const Login: React.FC = () => {
     const navigate = useNavigate();
 
     if (isAuthenticated) {
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to="/main" replace />;
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +21,7 @@ const Login: React.FC = () => {
 
         try {
             await login({ username, password });
-            navigate('/dashboard');
+            navigate('/main');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Invalid username or password');
         } finally {

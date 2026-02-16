@@ -12,6 +12,7 @@ Enterprise Point of Sale Backoffice system for managing inventory, stores, and t
 
 ```powershell
 docker-compose up -d
+docker exec -it pos-oracle-db sqlplus pos_user/pos_password@XEPDB1
 ```
 
 ### 2. Start Backend

@@ -21,7 +21,8 @@ func NewStoreHandler(storeRepo *repository.StoreRepository) *StoreHandler {
 
 // GetStores returns all stores
 func (h *StoreHandler) GetStores(c *gin.Context) {
-	stores, err := h.storeRepo.GetAll()
+	search := c.Query("search")
+	stores, err := h.storeRepo.GetAll(search)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to fetch stores", err)
 		return

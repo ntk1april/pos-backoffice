@@ -39,9 +39,11 @@ export interface UpdateStoreRequest {
 
 export const storeApi = {
   // Get all stores
-  getStores: async (): Promise<Store[]> => {
+  getStores: async (search?: string): Promise<Store[]> => {
+    const params = search ? { search } : {};
     const response = await axios.get(`${API_URL}/stores`, {
       headers: getAuthHeader(),
+      params,
     });
     return response.data.data;
   },
