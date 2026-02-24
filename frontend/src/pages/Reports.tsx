@@ -32,11 +32,45 @@ const Reports = () => {
         }
     };
 
+    // Get date range cutoff
+    const getDateCutoff = (range: string): Date | null => {
+        const now = new Date();
+        switch (range) {
+            case 'today': {
+                const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                return start;
+            }
+            case 'week': {
+                const start = new Date(now);
+                start.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+                start.setHours(0, 0, 0, 0);
+                return start;
+            }
+            case 'month': {
+                const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                return start;
+            }
+            default:
+                return null; // 'all' - no cutoff
+        }
+    };
+
     // Filter transactions
     const filteredTransactions = transactions.filter(tx => {
+        // Store filter
         if (selectedStore !== 'all' && tx.store_id !== selectedStore) {
             return false;
         }
+
+        // Date range filter
+        const dateCutoff = getDateCutoff(dateRange);
+        if (dateCutoff) {
+            const txDate = new Date(tx.transaction_date);
+            if (txDate < dateCutoff) {
+                return false;
+            }
+        }
+
         return true;
     });
 
